@@ -31,6 +31,7 @@ typedef struct Mercury_Feature_LL {
 
 typedef struct {
 	SDL_Window* window;
+	SDL_Renderer* renderer;
 	Mercury_Feature_LL* features;
 } Mercury_Window;
 
@@ -49,12 +50,21 @@ Mercury_Window* Mercury_CreateWindow(char* name, int width, int height) {
 		SDL_Quit();
 		return window;
 	}
+	window->renderer = SDL_CreateRenderer(window->window, -1, SDL_RENDERER_ACCELERATED);
+	if (window->renderer == NULL) {
+		SDL_DestroyWindow(window->window);
+		SDL_Quit();
+		return window;
+	}
+	window->features = NULL;
 	return window;
 };
 
 void Mercury_DestroyWindow(Mercury_Window* window) {
 	free(window->features);
+	SDL_DestroyRenderer(window->renderer);
 	SDL_DestroyWindow(window->window);
+	free(window);
 }
 
 void Mercury_AddFeature(Mercury_Window* window, Mercury_Feature* feature) {
@@ -128,9 +138,9 @@ int Mercury_HandleEvents(Mercury_Window* window) {
 }
 
 void Mercury_RenderWindow(Mercury_Window* window) {
-	SDL_Surface* screenSurface = SDL_GetWindowSurface(window->window);
 
-	SDL_FillRect(screenSurface, NULL, SDL_MapRGB(screenSurface->format, 0xFF, 0xFF, 0xFF));
+	SDL_SetRenderDrawColor(window->renderer, 0, 128, 255, 255);
+	SDL_RenderClear(window->renderer);
 
 	Mercury_Feature_LL* feature_LL = window->features;
 	while (feature_LL != NULL) {
@@ -140,17 +150,18 @@ void Mercury_RenderWindow(Mercury_Window* window) {
 				Mercury_ButtonFeature button = feature->button;
 				SDL_Rect rect = {button.x, button.y, button.w, button.h};
 				if (feature->button.hovered)
-					SDL_FillRect(screenSurface, &rect, SDL_MapRGB(screenSurface->format, 0xFF, 0, 0));
+					SDL_SetRenderDrawColor(window->renderer, 0, 255, 0, 255);
 				else
-					SDL_FillRect(screenSurface, &rect, SDL_MapRGB(screenSurface->format, 0, 0xFF, 0));
+					SDL_SetRenderDrawColor(window->renderer, 255, 0, 0, 255);
+				SDL_RenderFillRect(window->renderer, &rect);
 				break;
 			default:
 				break;
 		}
 		feature_LL = feature_LL->next;
 	}
-
-	SDL_UpdateWindowSurface(window->window);
+	
+	SDL_RenderPresent(window->renderer);
 }
 
 #endif
